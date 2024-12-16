@@ -3,6 +3,7 @@ import numpy as np
 from keras.preprocessing.image import load_img, img_to_array
 from keras.applications.vgg16 import VGG16, preprocess_input
 from keras.preprocessing.image import load_img, img_to_array
+import pandas as pd
 
 stop_words = [
     "a",
@@ -71,4 +72,10 @@ def preprocess_image(image_path):
     return img_array
 
 
-print(preprocess_text('Hello from world .'))
+def get_captions_with_file_names(path):
+    captions = pd.read_csv(
+        path, sep="|", header=None, names=["image", "number", "caption"], skiprows=1
+    )
+    return captions
+
+captions = get_captions_with_file_names("images/results.csv")
