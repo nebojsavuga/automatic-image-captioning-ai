@@ -1,8 +1,8 @@
 # automatic-image-captioning-ai
 
 ## Team:
-Nebojša Vuga R2 23/2024
-Bogdan Janošević R2 43/2024
+- Nebojša Vuga R2 23/2024
+- Bogdan Janošević R2 43/2024
 
 ## Problem Definition:
 The problem this project addresses is the automatic generation of textual descriptions for images. The goal of the project is to develop a system that uses artificial intelligence techniques to analyze the visual content of an image and automatically generate a description corresponding to that image.
