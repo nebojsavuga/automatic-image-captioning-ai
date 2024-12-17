@@ -32,18 +32,25 @@ def get_captions_with_file_names(path):
     return captions
 
 
-def preprocess_all_images(folder_path):
+def preprocess_and_save_images_to_npy(folder_path, output_file):
     preprocessed_images = []
     
     for filename in os.listdir(folder_path):
         if filename.endswith(('.jpg', '.jpeg', '.png')):
             image_path = os.path.join(folder_path, filename)  
-            preprocessed_image = preprocess_image(image_path) 
-            preprocessed_images.append(preprocessed_image)  
+            preprocessed_image = preprocess_image(image_path)  
+            preprocessed_images.append(preprocessed_image[0])  
+    
+    preprocessed_images = np.array(preprocessed_images)
+    np.save(output_file, preprocessed_images)
+    print(f"Sačuvano {len(preprocessed_images)} preprocesiranih slika u {output_file}")
     return preprocessed_images
+
+
 
 captions = get_captions_with_file_names("images/results.csv")
 captions["caption"] = captions["caption"].apply(preprocess_text)
 folder_path = "images/flickr30k_images"  
-all_preprocessed_images = preprocess_all_images(folder_path)
-print(f"Ukupno preprocesiranih slika: {len(all_preprocessed_images)}")
+output_file = "images/preprocessed_images.npy"
+preprocessed_images = preprocess_and_save_images_to_npy(folder_path, output_file)
+print(f"Ukupno preprocesiranih slika: {len(preprocessed_images)}")
