@@ -18,3 +18,4 @@ def get_model(max_length, vocabulary_size):
 
     model = Model(inputs=[inputs1, inputs2], outputs=outputs)
     model.compile(loss="categorical_crossentropy", optimizer="adam")
+    return model
