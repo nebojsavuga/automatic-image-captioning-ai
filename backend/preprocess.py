@@ -50,7 +50,8 @@ def preprocess_and_save_images_to_npy(folder_path, output_file):
 
 captions = get_captions_with_file_names("images/results.csv")
 captions["caption"] = captions["caption"].apply(preprocess_text)
-folder_path = "images/flickr30k_images"  
-output_file = "images/preprocessed_images.npy"
-preprocessed_images = preprocess_and_save_images_to_npy(folder_path, output_file)
-print(f"Ukupno preprocesiranih slika: {len(preprocessed_images)}")
+captions.to_csv("images/preprocessed_captions.csv", index=False)
+# folder_path = "images/flickr30k_images"  
+# output_file = "images/preprocessed_images.npy"
+# preprocessed_images = preprocess_and_save_images_to_npy(folder_path, output_file)
+# print(f"Ukupno preprocesiranih slika: {len(preprocessed_images)}")
