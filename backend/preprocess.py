@@ -12,7 +12,7 @@ def preprocess_text(text):
         return ""
     text = re.sub(r"[^\w\s]", "", text)
     text = text.lower()
-    text = text.replace("\s+", " ")
+    text = re.sub(r"\s+", " ", text).strip()
     words = text.split()
     return "startseq " + " ".join(words) + " endseq"
 

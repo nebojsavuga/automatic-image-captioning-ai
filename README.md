@@ -35,3 +35,48 @@ ROUGE is effective for evaluating the coverage of key words and phrases from ref
 METEOR (Metric for Evaluation of Translation with Explicit Ordering):
 METEOR is best for evaluating semantic similarity and linguistic diversity. It combines precision and recall through harmonic mean. It also accounts for synonyms, resulting in a much more comprehensive evaluation. In addition to accuracy, it assesses linguistic fluency.
 
+
+# Automatic Image Captioning AI
+
+## Authors
+Nebojša Vuga R2 23/2024  
+Bogdan Janošević R2 43/2024
+
+## Problem Definition
+Automatic generation of textual descriptions for images using AI. The system analyzes visual information and generates a matching description.
+
+## Dataset
+Flickr30k: 30,000 images, each with 5 different descriptions. [Dataset link](https://paperswithcode.com/dataset/flickr30k)
+
+## Methodology
+- Images scaled to 224x224, normalized (0-1)
+- Text descriptions tokenized with Start/End tokens
+- CNN (ResNet50/VGG16) for feature extraction
+- LSTM for sequence generation
+
+## Evaluation
+- BLEU: n-gram precision
+- ROUGE: recall of key phrases
+- METEOR: semantic similarity, language diversity
+
+## Usage
+1. Install requirements:
+	```bash
+	pip install -r backend/requirements.txt
+	```
+2. Prepare dataset in `backend/images/flickr30k_images/` and captions in `backend/images/results.csv`
+3. Run preprocessing and feature extraction:
+	```bash
+	python backend/preprocess.py
+	python backend/image_feature_extraction.py
+	```
+4. Train and evaluate model:
+	```bash
+	python backend/main.py
+	```
+
+## Results
+Evaluation metrics and generated captions are shown after training. Example images and captions are visualized.
+
+## Project for course: Sistemi za istraživanje i analizu podataka
+
