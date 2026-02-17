@@ -12,7 +12,7 @@ The project is linked to the course Data Exploration and Analysis Systems.
 
 ## Dataset:
 The dataset used for the project is sourced from the following link:
-https://paperswithcode.com/dataset/flickr30k.
+https://www.kaggle.com/datasets/hsankesara/flickr-image-dataset?resource=download.
 This dataset consists of 30,000 images from Flickr, where each image includes five different textual descriptions. These descriptions are provided in the form of a single sentence that describes the content of the image. The target feature is the textual description of the image, which consists of a sentence approximately 10–20 words long. The attribute of the dataset is the image itself.
 
 ## Methodology:
@@ -46,7 +46,7 @@ Bogdan Janošević R2 43/2024
 Automatic generation of textual descriptions for images using AI. The system analyzes visual information and generates a matching description.
 
 ## Dataset
-Flickr30k: 30,000 images, each with 5 different descriptions. [Dataset link](https://paperswithcode.com/dataset/flickr30k)
+Flickr30k: 30,000 images, each with 5 different descriptions. [Dataset link](https://www.kaggle.com/datasets/hsankesara/flickr-image-dataset?resource=download)
 
 ## Methodology
 - Images scaled to 224x224, normalized (0-1)
@@ -74,6 +74,9 @@ Flickr30k: 30,000 images, each with 5 different descriptions. [Dataset link](htt
 	```bash
 	python backend/main.py
 	```
+
+## Git note
+Do not commit dataset files or generated artifacts (`backend/images/...`) to Git.
 
 ## Results
 Evaluation metrics and generated captions are shown after training. Example images and captions are visualized.

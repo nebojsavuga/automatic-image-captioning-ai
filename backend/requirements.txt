@@ -1,8 +1,7 @@
-pandas
 numpy
+pandas
 tensorflow
-keras
-scikit-learn
-matplotlib
 nltk
-rouge
+rouge==1.0.1
+tqdm
+Pillow

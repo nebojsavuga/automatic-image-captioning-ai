@@ -1,21 +1,21 @@
-from keras.models import Model
-from keras.layers import Input, LSTM, Embedding, Dense, Dropout, add
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Embedding, Input, add
+from tensorflow.keras.models import Model
 
 
-def get_model(max_length, vocabulary_size):
-    inputs1 = Input(shape=(4096,))
-    fe1 = Dropout(0.4)(inputs1)
-    fe2 = Dense(256, activation="relu")(fe1)
-    inputs2 = Input(shape=(max_length,))
-    se1 = Embedding(vocabulary_size, 256, mask_zero=True)(inputs2)
-    se2 = Dropout(0.4)(se1)
-    se3 = LSTM(256)(se2)
+def get_model(max_length, vocabulary_size, feature_dim=2048):
+    image_inputs = Input(shape=(feature_dim,), name="image_features")
+    image_branch = Dropout(0.5)(image_inputs)
+    image_branch = Dense(256, activation="relu")(image_branch)
 
-    # decoder
-    decoder1 = add([fe2, se3])
-    decoder2 = Dense(256, activation="relu")(decoder1)
-    outputs = Dense(vocabulary_size, activation="softmax")(decoder2)
+    sequence_inputs = Input(shape=(max_length,), name="input_sequence")
+    sequence_branch = Embedding(vocabulary_size, 256, mask_zero=True)(sequence_inputs)
+    sequence_branch = Dropout(0.5)(sequence_branch)
+    sequence_branch = LSTM(256)(sequence_branch)
 
-    model = Model(inputs=[inputs1, inputs2], outputs=outputs)
-    model.compile(loss="categorical_crossentropy", optimizer="adam")
+    decoder = add([image_branch, sequence_branch])
+    decoder = Dense(256, activation="relu")(decoder)
+    outputs = Dense(vocabulary_size, activation="softmax")(decoder)
+
+    model = Model(inputs=[image_inputs, sequence_inputs], outputs=outputs)
+    model.compile(loss="sparse_categorical_crossentropy", optimizer="adam")
     return model
