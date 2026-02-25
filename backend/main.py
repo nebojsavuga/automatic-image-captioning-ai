@@ -14,7 +14,7 @@ from preprocess import build_caption_mapping, get_captions_with_file_names
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_CAPTIONS_FILE = BASE_DIR / "images" / "results.csv"
-DEFAULT_FEATURES_FILE = BASE_DIR / "images" / "image_features.npz"
+DEFAULT_FEATURES_FILE = BASE_DIR / "images" / "image_features.npy"
 
 
 def split_images(

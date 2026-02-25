@@ -19,7 +19,7 @@ from preprocess import (
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_CAPTIONS_FILE = BASE_DIR / "images" / "results.csv"
 DEFAULT_IMAGE_DIR = BASE_DIR / "images" / "flickr30k_images"
-DEFAULT_OUTPUT_FILE = BASE_DIR / "images" / "image_features.npz"
+DEFAULT_OUTPUT_FILE = BASE_DIR / "images" / "image_features.npy"
 
 
 def load_and_preprocess_image(image_path: str) -> np.ndarray:
