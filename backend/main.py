@@ -4,36 +4,15 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 import numpy as np
-from nltk.translate.bleu_score import corpus_bleu
-from nltk.translate.meteor_score import meteor_score
-from rouge import Rouge
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
+from evaluation import calculate_metrics, remove_special_tokens, split_images
 from model import get_model
 from preprocess import build_caption_mapping, get_captions_with_file_names
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_CAPTIONS_FILE = BASE_DIR / "images" / "results.csv"
 DEFAULT_FEATURES_FILE = BASE_DIR / "images" / "image_features.npz"
-
-
-def split_images(
-    image_names: List[str],
-    train_ratio: float,
-    val_ratio: float,
-    seed: int,
-) -> Tuple[List[str], List[str], List[str]]:
-    shuffled = image_names[:]
-    random.Random(seed).shuffle(shuffled)
-
-    total = len(shuffled)
-    train_end = int(total * train_ratio)
-    val_end = int(total * (train_ratio + val_ratio))
-
-    train_images = shuffled[:train_end]
-    val_images = shuffled[train_end:val_end]
-    test_images = shuffled[val_end:]
-    return train_images, val_images, test_images
 
 
 def build_vocabulary(
@@ -73,7 +52,9 @@ def create_training_samples(
     for image_name in image_names:
         feature = features_by_image[image_name]
         for caption in caption_mapping[image_name]:
-            seq = [word2idx[word] for word in caption.split() if word in word2idx]
+            seq = [word2idx[word] for word in caption.split() if word in word2idx][:max_length]
+            if len(seq) < 2:
+                continue
             for i in range(1, len(seq)):
                 image_inputs.append(feature)
                 sequence_inputs.append(seq[:i])
@@ -92,10 +73,6 @@ def create_training_samples(
         np.array(sequence_inputs, dtype=np.int32),
         np.array(targets, dtype=np.int32),
     )
-
-
-def remove_special_tokens(tokens: List[str]) -> List[str]:
-    return [token for token in tokens if token not in {"startseq", "endseq"}]
 
 
 def generate_caption(
@@ -150,28 +127,10 @@ def evaluate_model(
         references.append(reference_tokens)
         hypotheses.append(hypothesis_tokens)
 
-    bleu = corpus_bleu(references, hypotheses) if references else 0.0
-
-    rouge_scores = {"rouge-1": {}, "rouge-2": {}, "rouge-l": {}}
-    if references and hypotheses:
-        rouge = Rouge()
-        hypothesis_texts = [" ".join(tokens) for tokens in hypotheses]
-        first_reference_texts = [" ".join(refs[0]) for refs in references]
-        rouge_scores = rouge.get_scores(hypothesis_texts, first_reference_texts, avg=True)
-
-    meteor_values = []
-    for refs, hyp in zip(references, hypotheses):
-        try:
-            meteor_values.append(meteor_score(refs, hyp))
-        except LookupError:
-            meteor_values = []
-            break
-    meteor = float(np.mean(meteor_values)) if meteor_values else float("nan")
+    metric_values = calculate_metrics(references, hypotheses)
 
     return {
-        "bleu": bleu,
-        "rouge": rouge_scores,
-        "meteor": meteor,
+        **metric_values,
         "references": references,
         "hypotheses": hypotheses,
     }
@@ -185,18 +144,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--train-ratio", type=float, default=0.7)
     parser.add_argument("--val-ratio", type=float, default=0.2)
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--seed", type=int, default=3)
     parser.add_argument("--max-images", type=int, default=None)
     parser.add_argument(
         "--max-train-samples",
         type=int,
-        default=250000,
+        default=800000,
         help="Cap training samples for safer local runs.",
     )
     parser.add_argument(
         "--max-val-samples",
         type=int,
-        default=50000,
+        default=120000,
         help="Cap validation samples for safer local runs.",
     )
     return parser.parse_args()
@@ -233,7 +192,7 @@ def main() -> None:
         )
 
     word2idx, idx2word, vocab_size = build_vocabulary(caption_mapping, train_images)
-    max_length = get_max_length(caption_mapping, train_images)
+    max_length = min(get_max_length(caption_mapping, train_images), 30)
     feature_dim = features.shape[1]
 
     x_img_train, x_seq_train, y_train = create_training_samples(
