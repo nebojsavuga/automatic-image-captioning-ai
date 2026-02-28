@@ -5,3 +5,6 @@ nltk
 rouge==1.0.1
 tqdm
 Pillow
+transformers
+torch
+open_clip_torch
