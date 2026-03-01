@@ -106,7 +106,11 @@ def main() -> None:
     image_names = list_available_images(args.image_dir)
     matched_images = filter_images_with_captions(image_names, caption_mapping)
 
-    caption_mapping = {image: caption_mapping[image] for image in matched_images}
+    new_mapping = {}
+    for image in matched_images:
+        new_mapping[image] = caption_mapping[image]
+
+    caption_mapping = new_mapping
 
     output_dir = os.path.dirname(args.output_file)
     if output_dir:
