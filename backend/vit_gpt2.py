@@ -45,12 +45,22 @@ def generate_caption(
     tokenizer: AutoTokenizer,
     device: torch.device,
     max_new_tokens: int,
+    num_beams: int,
+    length_penalty: float,
+    no_repeat_ngram_size: int,
 ) -> str:
     inputs = image_processor(images=image, return_tensors="pt")
     pixel_values = inputs["pixel_values"].to(device)
 
     with torch.no_grad():
-        generated_ids = model.generate(pixel_values, max_new_tokens=max_new_tokens)
+        generated_ids = model.generate(
+            pixel_values,
+            max_new_tokens=max_new_tokens,
+            num_beams=num_beams,
+            early_stopping=True,
+            length_penalty=length_penalty,
+            no_repeat_ngram_size=no_repeat_ngram_size,
+        )
     generated_text = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
     return generated_text.strip()
 
@@ -105,6 +115,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=3)
     parser.add_argument("--max-images", type=int, default=None)
     parser.add_argument("--max-new-tokens", type=int, default=25)
+    parser.add_argument("--num-beams", type=int, default=1)
+    parser.add_argument("--length-penalty", type=float, default=1.0)
+    parser.add_argument("--no-repeat-ngram-size", type=int, default=2)
     return parser.parse_args()
 
 
@@ -139,12 +152,16 @@ def main() -> None:
                 tokenizer,
                 device,
                 args.max_new_tokens,
+                args.num_beams,
+                args.length_penalty,
+                args.no_repeat_ngram_size,
             )
 
     metrics = evaluate_predictions(test_images, caption_mapping, predicted_captions)
 
     print(f"Model: {args.model_name}")
     print(f"Device: {device}")
+    print(f"Num beams: {args.num_beams}")
     print(f"Images: test={len(test_images)}")
     print(f"BLEU: {metrics['bleu']:.4f}")
     print(f"ROUGE: {metrics['rouge']}")
