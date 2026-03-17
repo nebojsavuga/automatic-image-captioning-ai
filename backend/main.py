@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
+from caption_utils import build_vocabulary, get_max_length
 from evaluation import calculate_metrics, remove_special_tokens, split_images
 from model import get_model
 from preprocess import build_caption_mapping, get_captions_with_file_names
@@ -13,28 +14,6 @@ from preprocess import build_caption_mapping, get_captions_with_file_names
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_CAPTIONS_FILE = BASE_DIR / "images" / "results.csv"
 DEFAULT_FEATURES_FILE = BASE_DIR / "images" / "image_features.npz"
-
-
-def build_vocabulary(
-    caption_mapping: Dict[str, List[str]], train_images: List[str]
-) -> Tuple[Dict[str, int], Dict[int, str], int]:
-    words = set()
-    for image_name in train_images:
-        for caption in caption_mapping[image_name]:
-            words.update(caption.split())
-
-    word2idx = {word: idx + 1 for idx, word in enumerate(sorted(words))}
-    idx2word = {idx: word for word, idx in word2idx.items()}
-    vocab_size = len(word2idx) + 1
-    return word2idx, idx2word, vocab_size
-
-
-def get_max_length(caption_mapping: Dict[str, List[str]], train_images: List[str]) -> int:
-    max_length = 0
-    for image_name in train_images:
-        for caption in caption_mapping[image_name]:
-            max_length = max(max_length, len(caption.split()))
-    return max_length
 
 
 def create_training_samples(
