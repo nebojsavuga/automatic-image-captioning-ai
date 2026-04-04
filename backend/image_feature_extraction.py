@@ -22,7 +22,7 @@ DEFAULT_IMAGE_DIR = BASE_DIR / "images" / "flickr30k_images"
 DEFAULT_OUTPUT_FILE = BASE_DIR / "images" / "image_features.npz"
 
 
-def load_and_preprocess_image(image_path: str) -> np.ndarray:
+def load_and_preprocess_image(image_path: str):
     image = load_img(image_path, target_size=(224, 224))
     image_array = img_to_array(image)
     image_array = np.expand_dims(image_array, axis=0)
@@ -31,7 +31,7 @@ def load_and_preprocess_image(image_path: str) -> np.ndarray:
 
 def extract_image_features(
     image_dir: str, image_names: List[str], batch_size: int
-) -> np.ndarray:
+):
     resnet = ResNet50(weights="imagenet", include_top=False, pooling="avg")
     feature_extractor = Model(inputs=resnet.input, outputs=resnet.output)
 
@@ -49,7 +49,7 @@ def extract_image_features(
     return np.vstack(all_features).astype(np.float32)
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args():
     parser = argparse.ArgumentParser(description="Extract ResNet50 image features.")
     parser.add_argument("--captions-file", default=str(DEFAULT_CAPTIONS_FILE))
     parser.add_argument("--image-dir", default=str(DEFAULT_IMAGE_DIR))
@@ -64,7 +64,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main():
     args = parse_args()
     captions_df = get_captions_with_file_names(args.captions_file)
     caption_mapping = build_caption_mapping(captions_df)

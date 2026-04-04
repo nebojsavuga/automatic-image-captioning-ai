@@ -13,7 +13,7 @@ DEFAULT_IMAGE_DIR = BASE_DIR / "images" / "flickr30k_images"
 DEFAULT_OUTPUT_FILE = BASE_DIR / "images" / "preprocessed_captions.csv"
 
 
-def preprocess_text(text: str) -> str:
+def preprocess_text(text: str):
     if not isinstance(text, str):
         return "startseq endseq"
     text = re.sub(r"[^\w\s]", "", text)
@@ -24,7 +24,7 @@ def preprocess_text(text: str) -> str:
     return f"startseq {text} endseq"
 
 
-def get_captions_with_file_names(path: str) -> pd.DataFrame:
+def get_captions_with_file_names(path: str):
     captions = pd.read_csv(
         path,
         sep="|",
@@ -48,14 +48,14 @@ def get_captions_with_file_names(path: str) -> pd.DataFrame:
     return captions.reset_index(drop=True)
 
 
-def normalize_image_name(image_name: str) -> str:
+def normalize_image_name(image_name: str):
     image_name = image_name.strip()
     if "#" in image_name:
         image_name = image_name.split("#", 1)[0]
     return image_name
 
 
-def build_caption_mapping(captions_df: pd.DataFrame) -> Dict[str, List[str]]:
+def build_caption_mapping(captions_df: pd.DataFrame):
     mapping: Dict[str, List[str]] = {}
     for _, row in captions_df.iterrows():
         image_name = normalize_image_name(str(row["image"]))
@@ -64,7 +64,7 @@ def build_caption_mapping(captions_df: pd.DataFrame) -> Dict[str, List[str]]:
     return mapping
 
 
-def list_available_images(image_dir: str) -> List[str]:
+def list_available_images(image_dir: str):
     if not os.path.isdir(image_dir):
         raise FileNotFoundError(f"Image directory does not exist: {image_dir}")
     return sorted(
@@ -76,11 +76,11 @@ def list_available_images(image_dir: str) -> List[str]:
 
 def filter_images_with_captions(
     image_names: List[str], caption_mapping: Dict[str, List[str]]
-) -> List[str]:
+):
     return [name for name in image_names if name in caption_mapping]
 
 
-def save_preprocessed_captions(caption_mapping: Dict[str, List[str]], output_file: str) -> None:
+def save_preprocessed_captions(caption_mapping: Dict[str, List[str]], output_file: str):
     rows = []
     for image_name, captions in caption_mapping.items():
         for caption in captions:
@@ -90,7 +90,7 @@ def save_preprocessed_captions(caption_mapping: Dict[str, List[str]], output_fil
     print(f"Saved {len(preprocessed_df)} preprocessed captions to {output_file}")
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args():
     parser = argparse.ArgumentParser(description="Preprocess Flickr captions.")
     parser.add_argument("--captions-file", default=str(DEFAULT_CAPTIONS_FILE))
     parser.add_argument("--image-dir", default=str(DEFAULT_IMAGE_DIR))
@@ -98,7 +98,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main():
     args = parse_args()
     captions_df = get_captions_with_file_names(args.captions_file)
     caption_mapping = build_caption_mapping(captions_df)

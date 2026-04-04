@@ -1,9 +1,9 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 
 def build_vocabulary(
     caption_mapping: Dict[str, List[str]], train_images: List[str]
-) -> Tuple[Dict[str, int], Dict[int, str], int]:
+):
     words = set()
     for image_name in train_images:
         for caption in caption_mapping[image_name]:
@@ -15,7 +15,7 @@ def build_vocabulary(
     return word2idx, idx2word, vocabulary_size
 
 
-def get_max_length(caption_mapping: Dict[str, List[str]], train_images: List[str]) -> int:
+def get_max_length(caption_mapping: Dict[str, List[str]], train_images: List[str]):
     max_length = 0
     for image_name in train_images:
         for caption in caption_mapping[image_name]:

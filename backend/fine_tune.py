@@ -4,12 +4,18 @@ from pathlib import Path
 from typing import Dict, List, Sequence as TypingSequence, Tuple
 
 import numpy as np
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.utils import Sequence
 
 from caption_utils import build_vocabulary, get_max_length
-from evaluation import calculate_metrics, remove_special_tokens, split_images
+from evaluation import (
+    calculate_metrics,
+    calculate_sample_metrics,
+    export_evaluation_to_csv,
+    remove_special_tokens,
+    split_images,
+)
 from image_feature_extraction import load_and_preprocess_image
 from model import get_fine_tune_model
 from preprocess import (
@@ -22,6 +28,8 @@ from preprocess import (
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_CAPTIONS_FILE = BASE_DIR / "images" / "results.csv"
 DEFAULT_IMAGE_DIR = BASE_DIR / "images" / "flickr30k_images"
+DEFAULT_EVALUATION_FILE = BASE_DIR / "images" / "evaluation_results_fine_tune.csv"
+DEFAULT_MODEL_FILE = BASE_DIR / "images" / "fine_tune_best_model.keras"
 
 
 def create_caption_records(
@@ -30,7 +38,7 @@ def create_caption_records(
     word2idx: Dict[str, int],
     max_length: int,
     max_samples: int = None,
-) -> List[Tuple[str, List[int], int]]:
+):
     records = []
 
     for image_name in image_names:
@@ -57,7 +65,7 @@ class CaptionDataGenerator(Sequence):
         shuffle: bool = True,
         image_cache_size: int = 64,
         **kwargs,
-    ) -> None:
+    ):
         super().__init__(**kwargs)
         self.records = list(records)
         self.image_dir = Path(image_dir)
@@ -70,7 +78,7 @@ class CaptionDataGenerator(Sequence):
         self.indices = np.arange(len(self.records))
         self.on_epoch_end()
 
-    def __len__(self) -> int:
+    def __len__(self):
         if not self.records:
             return 0
         return int(np.ceil(len(self.records) / self.batch_size))
@@ -99,11 +107,11 @@ class CaptionDataGenerator(Sequence):
             np.array(batch_targets, dtype=np.int32),
         )
 
-    def on_epoch_end(self) -> None:
+    def on_epoch_end(self):
         if self.shuffle and len(self.indices) > 0:
             np.random.shuffle(self.indices)
 
-    def _load_image(self, image_name: str) -> np.ndarray:
+    def _load_image(self, image_name: str):
         cached = self.image_cache.get(image_name)
         if cached is not None:
             return cached
@@ -127,7 +135,7 @@ def generate_caption(
     word2idx: Dict[str, int],
     idx2word: Dict[int, str],
     max_length: int,
-) -> str:
+):
     in_tokens = ["startseq"]
 
     for _ in range(max_length):
@@ -153,10 +161,11 @@ def evaluate_model(
     word2idx: Dict[str, int],
     idx2word: Dict[int, str],
     max_length: int,
-) -> Dict[str, object]:
+):
     references = []
     hypotheses = []
     evaluated_images = []
+    sample_metrics = []
 
     for image_name in test_images:
         image_path = Path(image_dir) / image_name
@@ -179,6 +188,7 @@ def evaluate_model(
         references.append(reference_tokens)
         hypotheses.append(hypothesis_tokens)
         evaluated_images.append(image_name)
+        sample_metrics.append(calculate_sample_metrics(reference_tokens, hypothesis_tokens))
 
     metric_values = calculate_metrics(references, hypotheses)
 
@@ -187,13 +197,16 @@ def evaluate_model(
         "references": references,
         "hypotheses": hypotheses,
         "evaluated_images": evaluated_images,
+        "sample_metrics": sample_metrics,
     }
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args():
     parser = argparse.ArgumentParser(description="Fine-tune CNN + LSTM image captioning model.")
     parser.add_argument("--captions-file", default=str(DEFAULT_CAPTIONS_FILE))
     parser.add_argument("--image-dir", default=str(DEFAULT_IMAGE_DIR))
+    parser.add_argument("--evaluation-file", default=str(DEFAULT_EVALUATION_FILE))
+    parser.add_argument("--model-file", default=str(DEFAULT_MODEL_FILE))
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--train-ratio", type=float, default=0.7)
@@ -229,7 +242,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main():
     args = parse_args()
     np.random.seed(args.seed)
     random.seed(args.seed)
@@ -278,6 +291,7 @@ def main() -> None:
         "x": train_generator,
         "epochs": args.epochs,
     }
+    callbacks = []
 
     if val_records:
         val_generator = CaptionDataGenerator(
@@ -290,10 +304,29 @@ def main() -> None:
         )
         fit_kwargs["validation_data"] = val_generator
 
+        model_output_path = Path(args.model_file)
+        model_output_path.parent.mkdir(parents=True, exist_ok=True)
+        callbacks.append(
+            ModelCheckpoint(
+                filepath=str(model_output_path),
+                monitor="val_loss",
+                save_best_only=True,
+                save_weights_only=False,
+                verbose=1,
+            )
+        )
+
         if args.patience > 0:
-            fit_kwargs["callbacks"] = [
-                EarlyStopping(monitor="val_loss", patience=args.patience, restore_best_weights=True)
-            ]
+            callbacks.append(
+                EarlyStopping(
+                    monitor="val_loss",
+                    patience=args.patience,
+                    restore_best_weights=True,
+                )
+            )
+
+    if callbacks:
+        fit_kwargs["callbacks"] = callbacks
 
     model = get_fine_tune_model(
         max_length,
@@ -314,6 +347,14 @@ def main() -> None:
         max_length,
     )
 
+    export_evaluation_to_csv(
+        args.evaluation_file,
+        metrics["evaluated_images"],
+        metrics["references"],
+        metrics["hypotheses"],
+        metrics["sample_metrics"],
+    )
+
     print(f"Images: train={len(train_images)} val={len(val_images)} test={len(test_images)}")
     print(f"Vocabulary size: {vocab_size}")
     print(f"Max caption length: {max_length}")
@@ -322,6 +363,9 @@ def main() -> None:
     print(f"BLEU: {metrics['bleu']:.4f}")
     print(f"ROUGE: {metrics['rouge']}")
     print(f"METEOR: {metrics['meteor']:.4f}")
+    print(f"Saved evaluation results to: {args.evaluation_file}")
+    if val_records:
+        print(f"Saved best model to: {args.model_file}")
 
     print("\nSample predictions:")
     for idx, image_name in enumerate(metrics["evaluated_images"][:5]):

@@ -1,19 +1,26 @@
 import argparse
 import random
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import numpy as np
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 from caption_utils import build_vocabulary, get_max_length
-from evaluation import calculate_metrics, remove_special_tokens, split_images
+from evaluation import (
+    calculate_metrics,
+    calculate_sample_metrics,
+    export_evaluation_to_csv,
+    remove_special_tokens,
+    split_images,
+)
 from model import get_model
 from preprocess import build_caption_mapping, get_captions_with_file_names
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_CAPTIONS_FILE = BASE_DIR / "images" / "results.csv"
 DEFAULT_FEATURES_FILE = BASE_DIR / "images" / "image_features.npz"
+DEFAULT_EVALUATION_FILE = BASE_DIR / "images" / "evaluation_results_main.csv"
 
 
 def create_training_samples(
@@ -23,7 +30,7 @@ def create_training_samples(
     word2idx: Dict[str, int],
     max_length: int,
     max_samples: int = None,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+):
     image_inputs = []
     sequence_inputs = []
     targets = []
@@ -60,7 +67,7 @@ def generate_caption(
     word2idx: Dict[str, int],
     idx2word: Dict[int, str],
     max_length: int,
-) -> str:
+):
     in_tokens = ["startseq"]
     for _ in range(max_length):
         sequence = [word2idx.get(token, 0) for token in in_tokens]
@@ -82,9 +89,11 @@ def evaluate_model(
     word2idx: Dict[str, int],
     idx2word: Dict[int, str],
     max_length: int,
-) -> Dict[str, object]:
+):
     references = []
     hypotheses = []
+    evaluated_images = []
+    sample_metrics = []
 
     for image_name in test_images:
         generated_caption = generate_caption(
@@ -105,6 +114,8 @@ def evaluate_model(
 
         references.append(reference_tokens)
         hypotheses.append(hypothesis_tokens)
+        evaluated_images.append(image_name)
+        sample_metrics.append(calculate_sample_metrics(reference_tokens, hypothesis_tokens))
 
     metric_values = calculate_metrics(references, hypotheses)
 
@@ -112,13 +123,16 @@ def evaluate_model(
         **metric_values,
         "references": references,
         "hypotheses": hypotheses,
+        "evaluated_images": evaluated_images,
+        "sample_metrics": sample_metrics,
     }
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args():
     parser = argparse.ArgumentParser(description="Train and evaluate captioning model.")
     parser.add_argument("--captions-file", default=str(DEFAULT_CAPTIONS_FILE))
     parser.add_argument("--features-file", default=str(DEFAULT_FEATURES_FILE))
+    parser.add_argument("--evaluation-file", default=str(DEFAULT_EVALUATION_FILE))
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--train-ratio", type=float, default=0.7)
@@ -140,7 +154,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main():
     args = parse_args()
     np.random.seed(args.seed)
     random.seed(args.seed)
@@ -217,6 +231,14 @@ def main() -> None:
         max_length,
     )
 
+    export_evaluation_to_csv(
+        args.evaluation_file,
+        metrics["evaluated_images"],
+        metrics["references"],
+        metrics["hypotheses"],
+        metrics["sample_metrics"],
+    )
+
     print(f"Images: train={len(train_images)} val={len(val_images)} test={len(test_images)}")
     print(f"Vocabulary size: {vocab_size}")
     print(f"Max caption length: {max_length}")
@@ -225,9 +247,10 @@ def main() -> None:
     print(f"BLEU: {metrics['bleu']:.4f}")
     print(f"ROUGE: {metrics['rouge']}")
     print(f"METEOR: {metrics['meteor']:.4f}")
+    print(f"evaluation results: {args.evaluation_file}")
 
     print("\nSample predictions:")
-    for idx, image_name in enumerate(test_images[:5]):
+    for idx, image_name in enumerate(metrics["evaluated_images"][:5]):
         generated = " ".join(metrics["hypotheses"][idx]) if idx < len(metrics["hypotheses"]) else ""
         reference = (
             " ".join(metrics["references"][idx][0]) if idx < len(metrics["references"]) else ""
