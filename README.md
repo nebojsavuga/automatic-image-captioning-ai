@@ -81,5 +81,5 @@ Do not commit dataset files or generated artifacts (`backend/images/...`) to Git
 ## Results
 Evaluation metrics and generated captions are shown after training. Example images and captions are visualized.
 
-## Project for course: Sistemi za istraživanje i analizu podataka
+## Project for course: Sistemi za istraživanje i analizu podataka and Neuronske mreže
 
